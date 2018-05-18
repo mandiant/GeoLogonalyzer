@@ -1,0 +1,11 @@
+#
+# Python dependencies for running on GeoLogonalyzer.py
+#
+# Usage:
+#   pip install -r requirements.txt
+#
+netaddr
+python-geoip
+win_inet_pton
+geopy
+geoip2
