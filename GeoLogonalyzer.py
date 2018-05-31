@@ -445,6 +445,17 @@ def calculate_logon_differences(user_list):
 
 def diff_dict_to_list(logon_diff_dict):
     """Convert logon_diff_dict to list for printing"""
+    
+    first_asn_name = logon_diff_dict.get("first_asn_name", "")
+    if first_asn_name is None:
+        first_asn_name = ""
+    first_asn_name = first_asn_name.encode('utf-8').strip()
+    
+    second_asn_name = logon_diff_dict.get("second_asn_name", "")
+    if second_asn_name is None:
+        second_asn_name = ""
+    second_asn_name = second_asn_name.encode('utf-8').strip()
+    
     return ([str(logon_diff_dict.get("user", "")),
              str(logon_diff_dict.get("anomalies_string", "")),
              str(logon_diff_dict.get("first_time", "")),
@@ -454,7 +465,7 @@ def diff_dict_to_list(logon_diff_dict):
              str(logon_diff_dict.get("first_subdivision", "")),
              str(logon_diff_dict.get("first_location", "")),
              str(logon_diff_dict.get("first_asn_number", "")),
-             str(logon_diff_dict.get("first_asn_name", "")),
+             first_asn_name,
              str(logon_diff_dict.get("first_client", "")),
              str(logon_diff_dict.get("first_hostname", "")),
              str(logon_diff_dict.get("first_streak", "")),
@@ -465,7 +476,7 @@ def diff_dict_to_list(logon_diff_dict):
              str(logon_diff_dict.get("second_subdivision", "")),
              str(logon_diff_dict.get("second_location", "")),
              str(logon_diff_dict.get("second_asn_number", "")),
-             str(logon_diff_dict.get("second_asn_name", "")),
+             second_asn_name,
              str(logon_diff_dict.get("second_client", "")),
              str(logon_diff_dict.get("second_hostname", "")),
              str(logon_diff_dict.get("location_miles_diff", "")),
@@ -778,7 +789,7 @@ def main(args):
             # If the input is IPs only
             if args.ip_only:
                 csv_writer.writerow([str(ip_string), str(location), str(country), str(subdivisions),
-                                     str(dch_company), str(asn_number), str(asn_name)])
+                                     str(dch_company.encode('utf-8').strip()), str(asn_number), str(asn_name.encode('utf-8').strip())])
 
             # If the input is an actual log, start doing user matching or tracking
             else:
