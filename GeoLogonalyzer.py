@@ -132,7 +132,7 @@ import urllib2
 import tarfile
 import shutil
 import os
-import csv
+import unicodecsv as csv
 import time
 
 # Imports that are not likely to be installed by default:
@@ -454,7 +454,7 @@ def diff_dict_to_list(logon_diff_dict):
              str(logon_diff_dict.get("first_subdivision", "")),
              str(logon_diff_dict.get("first_location", "")),
              str(logon_diff_dict.get("first_asn_number", "")),
-             str(logon_diff_dict.get("first_asn_name", "")),
+             unicode(logon_diff_dict.get("first_asn_name", "")),
              str(logon_diff_dict.get("first_client", "")),
              str(logon_diff_dict.get("first_hostname", "")),
              str(logon_diff_dict.get("first_streak", "")),
@@ -465,7 +465,7 @@ def diff_dict_to_list(logon_diff_dict):
              str(logon_diff_dict.get("second_subdivision", "")),
              str(logon_diff_dict.get("second_location", "")),
              str(logon_diff_dict.get("second_asn_number", "")),
-             str(logon_diff_dict.get("second_asn_name", "")),
+             unicode(logon_diff_dict.get("second_asn_name", "")),
              str(logon_diff_dict.get("second_client", "")),
              str(logon_diff_dict.get("second_hostname", "")),
              str(logon_diff_dict.get("location_miles_diff", "")),

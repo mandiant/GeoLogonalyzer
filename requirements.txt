@@ -9,3 +9,4 @@ python-geoip
 win_inet_pton
 geopy
 geoip2
+unicodecsv
