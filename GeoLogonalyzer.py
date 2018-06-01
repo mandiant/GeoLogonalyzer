@@ -26,6 +26,7 @@
 #       "1st Country",
 #       "1st Region",
 #       "1st Coords",
+#       "1st Radius of Accuracy"
 #       "1st ASN #",
 #       "1st ASN Name",
 #       "1st VPN Client",
@@ -37,6 +38,7 @@
 #       "2nd Country",
 #       "2nd Region",
 #       "2nd Coords",
+#       "2nd Radius of Accuracy"
 #       "2nd ASN #",
 #       "2nd ASN Name",
 #       "2nd VPN Client",
@@ -132,7 +134,7 @@ import urllib2
 import tarfile
 import shutil
 import os
-import csv
+import unicodecsv as csv
 import time
 
 # Imports that are not likely to be installed by default:
@@ -175,6 +177,7 @@ FAR_DISTANCE = 500
 SECONDS_PER_HOUR = 3600
 FAST_MPH = 500
 IMPOSSIBLE_MPH = 99999999
+KILOMETERS_TO_MILES = 0.621371
 
 def create_geoip_db():
     """Open GeoIP DB if available, download if needed"""
@@ -355,10 +358,18 @@ def calculate_logon_differences(user_list):
     # Create empty anomalies set to track suspicious flags
     difference_dict["anomalies"] = set()
 
+    # Find radius_accuracy registered to IP address
+    difference_dict["first_radius_accuracy"] = user_list[0]["radius"]
+    difference_dict["second_radius_accuracy"] = user_list[1]["radius"]
+
     # "location" is coordinates and vincentrify calculates miles between coordinates
     difference_dict["first_location"] = user_list[0]["location"]
     difference_dict["second_location"] = user_list[1]["location"]
-    difference_dict["location_miles_diff"] = vincenty(difference_dict["first_location"],
+    if maxmind_radius:
+        difference_dict["location_miles_diff"] = vincenty(difference_dict["first_location"],
+                                                      difference_dict["second_location"]).miles - (int(difference_dict["first_radius_accuracy"]) + int(difference_dict["second_radius_accuracy"])) * KILOMETERS_TO_MILES
+    else:
+        difference_dict["location_miles_diff"] = vincenty(difference_dict["first_location"],
                                                       difference_dict["second_location"]).miles
 
     # Add anomaly if distance is far
@@ -453,8 +464,9 @@ def diff_dict_to_list(logon_diff_dict):
              str(logon_diff_dict.get("first_country", "")),
              str(logon_diff_dict.get("first_subdivision", "")),
              str(logon_diff_dict.get("first_location", "")),
+             str(logon_diff_dict.get("first_radius_accuracy", "")),
              str(logon_diff_dict.get("first_asn_number", "")),
-             str(logon_diff_dict.get("first_asn_name", "")),
+             unicode(logon_diff_dict.get("first_asn_name", "")),
              str(logon_diff_dict.get("first_client", "")),
              str(logon_diff_dict.get("first_hostname", "")),
              str(logon_diff_dict.get("first_streak", "")),
@@ -464,8 +476,9 @@ def diff_dict_to_list(logon_diff_dict):
              str(logon_diff_dict.get("second_country", "")),
              str(logon_diff_dict.get("second_subdivision", "")),
              str(logon_diff_dict.get("second_location", "")),
+             str(logon_diff_dict.get("second_radius_accuracy", "")),
              str(logon_diff_dict.get("second_asn_number", "")),
-             str(logon_diff_dict.get("second_asn_name", "")),
+             unicode(logon_diff_dict.get("second_asn_name", "")),
              str(logon_diff_dict.get("second_client", "")),
              str(logon_diff_dict.get("second_hostname", "")),
              str(logon_diff_dict.get("location_miles_diff", "")),
@@ -478,6 +491,7 @@ def  reserved_ip_check(ip_string):
     # IP details for invalid IP addresses
     invalid_ip_details = {"country":"INVALID",
                           "location":RESERVED_IP_COORDINATES,
+                          "radius":"0",
                           "subdivisions":"INVALID",
                           "dch_company":"",
                           "asn_number":"",
@@ -486,6 +500,7 @@ def  reserved_ip_check(ip_string):
     # IP details for MULTICAST IP addresses
     multicast_ip_details = {"country":"MULTICAST",
                             "location":RESERVED_IP_COORDINATES,
+                            "radius":"0",
                             "subdivisions":"MULTICAST",
                             "dch_company":"",
                             "asn_number":"",
@@ -494,6 +509,7 @@ def  reserved_ip_check(ip_string):
     # IP details for PRIVATE IP addresses
     private_ip_details = {"country":"PRIVATE",
                           "location":RESERVED_IP_COORDINATES,
+                          "radius":"0",
                           "subdivisions":"PRIVATE",
                           "dch_company":"",
                           "asn_number":"",
@@ -502,6 +518,7 @@ def  reserved_ip_check(ip_string):
     # IP details for RESERVED IP addresses
     reserved_ip_details = {"country":"RESERVED",
                            "location":RESERVED_IP_COORDINATES,
+                           "radius":"0",
                            "subdivisions":"RESERVED",
                            "dch_company":"",
                            "asn_number":"",
@@ -510,6 +527,7 @@ def  reserved_ip_check(ip_string):
     # IP details for NETMASK IP addresses
     netmask_ip_details = {"country":"NETMASK",
                           "location":RESERVED_IP_COORDINATES,
+                          "radius":"0",
                           "subdivisions":"NETMASK",
                           "dch_company":"",
                           "asn_number":"",
@@ -518,6 +536,7 @@ def  reserved_ip_check(ip_string):
     # IP details for HOSTMASK IP addresses
     hostmask_ip_details = {"country":"HOSTMASK",
                            "location":RESERVED_IP_COORDINATES,
+                           "radius":"0",
                            "subdivisions":"HOSTMASK",
                            "dch_company":"",
                            "asn_number":"",
@@ -526,6 +545,7 @@ def  reserved_ip_check(ip_string):
     # IP details for LOOPBACK IP addresses
     loopback_ip_details = {"country":"LOOPBACK",
                            "location":RESERVED_IP_COORDINATES,
+                           "radius":"0",
                            "subdivisions":"LOOPBACK",
                            "dch_company":"",
                            "asn_number":"",
@@ -610,6 +630,13 @@ def main(args):
     else:
         skip_rfc1918 = False
 
+    # Determine if user wants to include the radius of MaxMind results in the distance calculations
+    global maxmind_radius
+    if args.maxmind_radius:
+        maxmind_radius = True
+    else:
+        maxmind_radius = False
+
     # Create output file
     output_file = open("{}".format(args.output), "wb")
     csv_writer = csv.writer(output_file, delimiter=',', quotechar='"',
@@ -628,6 +655,7 @@ def main(args):
                      "first_country":"1st Country",
                      "first_subdivision":"1st Region",
                      "first_location":"1st Coords",
+                     "first_radius_accuracy":"1st Radius",
                      "first_asn_number":"1st ASN #",
                      "first_asn_name":"1st ASN Name",
                      "first_client":"1st VPN Client",
@@ -639,6 +667,7 @@ def main(args):
                      "second_country":"2nd Country",
                      "second_subdivision":"2nd Region",
                      "second_location":"2nd Coords",
+                     "second_radius_accuracy":"2nd Radius",
                      "second_asn_number":"2nd ASN #",
                      "second_asn_name":"2nd ASN Name",
                      "second_client":"2nd VPN Client",
@@ -697,6 +726,7 @@ def main(args):
             if reserved_ip_check(ip_string):
                 country = reserved_ip_details["country"]
                 location = reserved_ip_details["location"]
+                radius = reserved_ip_details["radius"]
                 subdivisions = reserved_ip_details["subdivisions"]
                 dch_company = reserved_ip_details["dch_company"]
                 asn_number = reserved_ip_details["asn_number"]
@@ -713,6 +743,7 @@ def main(args):
                     # see if we have seen this IP before and looked it up in the DB
                     country = ip_cache[ip_string]["country"]
                     location = ip_cache[ip_string]["location"]
+                    radius = ip_cache[ip_string]["radius"]
                     subdivisions = ip_cache[ip_string]["subdivisions"]
                     dch_company = ip_cache[ip_string]["dch_company"]
                     asn_number = ip_cache[ip_string]["asn_number"]
@@ -737,6 +768,13 @@ def main(args):
                     except AttributeError:
                         location = (0, 0)
                     ip_cache[ip_string]["location"] = location
+
+                    # Find Radius from MaxMind geoip DB
+                    try:
+                        radius = geoip_db_match.get_info_dict()['location']['accuracy_radius']
+                    except AttributeError:
+                        radius = "0"
+                    ip_cache[ip_string]["radius"] = radius
 
                     # Find Subdivisions from MaxMind geoip DB
                     try:
@@ -777,7 +815,7 @@ def main(args):
 
             # If the input is IPs only
             if args.ip_only:
-                csv_writer.writerow([str(ip_string), str(location), str(country), str(subdivisions),
+                csv_writer.writerow([str(ip_string), str(location), str(radius), str(country), str(subdivisions),
                                      str(dch_company), str(asn_number), str(asn_name)])
 
             # If the input is an actual log, start doing user matching or tracking
@@ -796,13 +834,13 @@ def main(args):
                                                 "dch_company":dch_company,
                                                 "country":country,
                                                 "location":location,
+                                                "radius":radius,
                                                 "subdivisions":subdivisions,
                                                 "ip_streak":1,
                                                 "asn_number":asn_number,
                                                 "asn_name":asn_name,
                                                 "hostname":hostname,
                                                 "client":client})
-
                         # If the second logon has a different source IP, source hostname, or
                         # VPN client than the previously seen logon, calculate the differences
                         if user_dict[user][0]["ip"] != user_dict[user][1]["ip"]:
@@ -842,6 +880,7 @@ def main(args):
                                         "dch_company":dch_company,
                                         "country":country,
                                         "location":location,
+                                        "radius":radius,
                                         "subdivisions":subdivisions,
                                         "ip_streak":1,
                                         "asn_number":asn_number,
@@ -865,6 +904,7 @@ def main(args):
             first_country = logon_info[0]["country"]
             first_subdivision = logon_info[0]["subdivisions"]
             first_location = logon_info[0]["location"]
+            first_radius_accuracy = logon_info[0]["radius"]
             first_streak = logon_info[0]["ip_streak"]
             first_asn_number = logon_info[0]["asn_number"]
             first_asn_name = logon_info[0]["asn_name"]
@@ -887,6 +927,7 @@ def main(args):
                             "first_country":first_country,
                             "first_subdivision":first_subdivision,
                             "first_location":first_location,
+                            "first_radius_accuracy":first_radius_accuracy,
                             "first_asn_number":first_asn_number,
                             "first_asn_name":first_asn_name,
                             "first_client":first_client,
@@ -976,5 +1017,7 @@ if __name__ == "__main__":
     parser.add_argument("--output", help='Output CSV file', required=True)
     parser.add_argument("--skip_rfc1918", help='Skip RFC1918 source IP addresses', required=False,
                         action='store_true')
+    parser.add_argument("--maxmind_radius", help='Decrease the distance between the two locations by their respective accuracy radii', required=False,
+                    action='store_true')
     args = parser.parse_args()
     main(args)
