@@ -267,4 +267,4 @@ Example ip-output.csv:
 GeoLogonalyzer was created by David Pany. The project was inspired by research performed by FireEye's data science team including Christopher Schmitt, Seth Summersett, Jeff Johns, Alexander Mulfinger, and more whose work supports live remote access processing in FireEye Helix - https://www.fireeye.com/solutions/helix.html. 
 
 # Contact
-Please comment david.pany@fireeye.com or @davidpany on Twitter for bugs, comments, or suggestions. 
+Please contact david.pany@fireeye.com or @davidpany on Twitter for bugs, comments, or suggestions. 
