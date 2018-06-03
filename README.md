@@ -264,7 +264,7 @@ Example ip-output.csv:
 3. VPN or network tunneling services may skew results
 
 # Credits
-GeoLogonalyzer was created by David Pany. The project was inspired by research performed by FireEye's data science team including Christopher Schmitt, Seth Summersett, Jeff Johns, Alexander Mulfinger, and more whose work supports live remote access processing in FireEye Helix - https://www.fireeye.com/solutions/helix.html. 
+GeoLogonalyzer was created by David Pany. The project was inspired by research performed by FireEye's data science team including Christopher Schmitt, Seth Summersett, Jeff Johns, Alexander Mulfinger, and more whose work supports live remote access processing in FireEye Helix - https://www.fireeye.com/solutions/helix.html. The "Logonalyzer" name was originally created by @0xF2EDCA5A.
 
 # Contact
 Please contact david.pany@fireeye.com or @davidpany on Twitter for bugs, comments, or suggestions. 
