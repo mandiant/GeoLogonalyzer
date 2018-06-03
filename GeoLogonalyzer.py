@@ -1,12 +1,12 @@
 #!/usr/bin/env python
 #
 #GeoLogonalyzer.py
-#Version 1.0
+#Version 1.01
 #   Geofeasibility calculator and datacenter cross reference utility
 #   customizable for various VPN log formats.
 #
 #Changes:
-#   1.0 - Initial version
+#   1.01 - Added Support for unicode ASN names
 #
 #Description:
 #   GeoLogonalyzer will perform location and metadata lookups on source IP
@@ -121,6 +121,8 @@
 #   This product includes datacenter categorizations created by Nick Galbreath, available from
 #       https://github.com/client9/ipcat/.
 #
+#   Mad gr33tz to @0xF2EDCA5A for the "Logonalyzer" name inspiration.
+#
 
 from __future__ import print_function
 import sys
@@ -134,6 +136,7 @@ import shutil
 import os
 import csv
 import time
+import unicodedata
 
 # Imports that are not likely to be installed by default:
 try:
@@ -771,6 +774,8 @@ def main(args):
                     # Find ASN organization name from MaxMind ASN DB
                     try:
                         asn_name = asn_db_match.autonomous_system_organization
+                        if asn_name != None:
+                            asn_name = unicodedata.normalize('NFKD',asn_name).encode('ascii','ignore')
                     except AttributeError:
                         asn_name = " "
                     ip_cache[ip_string]["asn_name"] = asn_name
@@ -873,7 +878,7 @@ def main(args):
 
             # The only possible anomaly for unchanged or last logon records could be DCH,
             # so add that in here if applicable
-            if first_ip_dch_company != " ":
+            if first_ip_dch_company not in [" ", ""]:
                 first_anomalies = "DCH"
             else:
                 first_anomalies = " "
@@ -931,7 +936,7 @@ if __name__ == "__main__":
 
     # Welcome Message
     sys.stderr.write("\n   Thank you for using GeoLogonAnalyzer.py, created by David Pany at"
-                     " FireEye, Inc.\n\n")
+                     " FireEye, Inc.\n      Version 1.01\n\n")
     sys.stderr.write("   Example command syntax:\n")
     sys.stderr.write("      python GeoLogonalyzer.py --csv VPNLogs.csv --output output.csv\n\n")
 
@@ -978,3 +983,4 @@ if __name__ == "__main__":
                         action='store_true')
     args = parser.parse_args()
     main(args)
+    
