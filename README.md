@@ -139,7 +139,7 @@ Here is a Juniper PulseSecure log format and the sample code to extract required
 # Execution Syntax
 The following command will parse the input.csv shown above and save results to output.csv:
 
-    GeoLogonalyzer --csv input.csv --output.csv
+    GeoLogonalyzer --csv input.csv --output output.csv
 ------
 # Output
 The output.csv file will include the following column headers:
