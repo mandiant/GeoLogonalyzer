@@ -8,4 +8,4 @@ netaddr
 python-geoip
 win_inet_pton
 geopy
-geoip2
+geoip2>=2.9.0
