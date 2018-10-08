@@ -1,12 +1,12 @@
 #!/usr/bin/env python
 #
 #GeoLogonalyzer.py
-#Version 1.01
+#Version 1.02
 #   Geofeasibility calculator and datacenter cross reference utility
 #   customizable for various VPN log formats.
 #
 #Changes:
-#   1.01 - Added Support for unicode ASN names
+#   1.02 - Added check for minimum geoip2 dependency version
 #
 #Description:
 #   GeoLogonalyzer will perform location and metadata lookups on source IP
@@ -137,6 +137,7 @@ import os
 import csv
 import time
 import unicodedata
+import pkg_resources
 
 # Imports that are not likely to be installed by default:
 try:
@@ -168,8 +169,13 @@ except ImportError:
 try:
     import geoip2.database
     import geoip2.errors
+    try: #ensure that geopip2 is 2.9.0 or greater. Older versions cause issues.
+        assert pkg_resources.get_distribution("geoip2").version >= '2.9.0'
+    except AssertionError:
+        sys.stderr.write("Please upgrade the geoip dependency:\n\tpip install geoip2>=2.9.0\n")
+        sys.exit()
 except ImportError:
-    sys.stderr.write("Please install the geoip dependency:\n\tpip install geoip2\n")
+    sys.stderr.write("Please install the geoip dependency:\n\tpip install geoip2>=2.9.0\n")
     sys.exit()
 
 # Constants
