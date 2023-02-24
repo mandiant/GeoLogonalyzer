@@ -9,6 +9,7 @@ python-geoip = "*"
 win-inet-pton = "*"
 geopy = "*"
 geoip2 = ">=2.9.0"
+python-geoip-python3 = "*"
 
 [dev-packages]
 

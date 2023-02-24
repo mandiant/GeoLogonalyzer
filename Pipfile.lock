@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "e89e811d3410eff63fe18f48bf9fa0046a55f27db7db5eb63fc9589887f8ef94"
+            "sha256": "fcf2971f392d1f1fa83eb1a28b88f531d97c813e21254732b2afa6bb94261bfa"
         },
         "pipfile-spec": 6,
         "requires": {
@@ -448,6 +448,14 @@
             ],
             "index": "pypi",
             "version": "==1.2"
+        },
+        "python-geoip-python3": {
+            "hashes": [
+                "sha256:7887ee7b89b7a7d69b4b2388bd1c70138b58b364555f52865d14330f9206e385",
+                "sha256:d11d2c54d2bedafafe804033a7b46c933c7c9729d0bf10d74cdc9b1d7445caf5"
+            ],
+            "index": "pypi",
+            "version": "==1.3"
         },
         "requests": {
             "hashes": [

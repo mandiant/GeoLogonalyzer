@@ -6,6 +6,7 @@
 #
 netaddr
 python-geoip
+python-geoip-python3
 win_inet_pton
 geopy
 geoip2>=2.9.0
