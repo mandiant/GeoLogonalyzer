@@ -130,7 +130,7 @@ import re # Might be used for custom line parsing
 import argparse
 from datetime import datetime
 import urllib
-import urllib2
+import urllib.request as request
 import tarfile
 import shutil
 import os
@@ -161,7 +161,7 @@ except ImportError:
     sys.exit()
 
 try:
-    from geopy.distance import vincenty
+    from geopy.distance import geodesic
 except ImportError:
     sys.stderr.write("Please install the geopy dependency:\n\tpip install geopy\n")
     sys.exit()
@@ -270,8 +270,8 @@ def create_asn_db():
             sys.stderr.write("\t1. Download the 'GeoLite2 ASN - MaxMind DB binary' from "
                              "http://dev.maxmind.com/geoip/geoip2/geolite2/\n")
             sys.stderr.write("\t2. Extract the contents and make sure the DB file is named "
-                             "'GeoLite2-ASN.tar.gz'\n")
-            sys.stderr.write("\t3. Place 'GeoLite2-ASN.tar.gz' in the 'GeoLogonalyzer.py' working"
+                             "'GeoLite2-ASN.mmdb'\n")
+            sys.stderr.write("\t3. Place 'GeoLite2-ASN.mmdb' in the 'GeoLogonalyzer.py' working"
                              "directory'\n")
             sys.exit()
 
@@ -280,10 +280,10 @@ def create_dch_dict():
 
     sys.stderr.write("\nDownloading DCH (data center hosting) data from "
                      "https://raw.githubusercontent.com/client9/ipcat/master/datacenters.csv\n")
-    dch_response = urllib2.urlopen('https://raw.githubusercontent.com/client9/ipcat/master/'
+    dch_response = request.urlopen('https://raw.githubusercontent.com/client9/ipcat/master/'
                                    'datacenters.csv')
 
-    dch_file = dch_response.read()
+    dch_file = dch_response.read().decode()
     dch_dict = {}
     dch_list = dch_file.split("\n")
 
@@ -367,7 +367,7 @@ def calculate_logon_differences(user_list):
     # "location" is coordinates and vincentrify calculates miles between coordinates
     difference_dict["first_location"] = user_list[0]["location"]
     difference_dict["second_location"] = user_list[1]["location"]
-    difference_dict["location_miles_diff"] = vincenty(difference_dict["first_location"],
+    difference_dict["location_miles_diff"] = geodesic(difference_dict["first_location"],
                                                       difference_dict["second_location"]).miles
 
     # Add anomaly if distance is far
@@ -575,7 +575,7 @@ def  reserved_ip_check(ip_string):
 def find_dch(ip_string, dch_dict):
     """Find if the IP exists in a DCH subnet from our created database"""
 
-    for cidr_range, company in dch_dict.iteritems():
+    for cidr_range, company in dch_dict.items():
         if IPAddress(ip_string) in cidr_range:
             return company
 
@@ -620,7 +620,7 @@ def main(args):
         skip_rfc1918 = False
 
     # Create output file
-    output_file = open("{}".format(args.output), "wb")
+    output_file = open("{}".format(args.output), "w")
     csv_writer = csv.writer(output_file, delimiter=',', quotechar='"',
                             quoting=csv.QUOTE_MINIMAL)
 
@@ -862,7 +862,7 @@ def main(args):
 
     # Print information for the last logon streak of each user
     # Useful if there are no source IP changes for that user
-    for user, logon_info in user_dict.iteritems():
+    for user, logon_info in user_dict.items():
 
         if len(logon_info) != 1:
             # Catch if a user has more than 1 logon remaining, which should not happen
