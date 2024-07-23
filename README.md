@@ -35,14 +35,12 @@ will create one line of output that shows information related to the change such
 ----
 # Preparation
 
-### Windows Executable
-For Windows users, we recommend running the compiled executable due to the number of python 
-dependencies required for GeoLogonalyzer:
-
-    https://github.com/fireeye/GeoLogonalyzer/releases
-
-Note that the provided Windows Executable will not allow you to add custom log parsing or change
-the following constants described below. 
+### MaxMind Databases
+1. Make a free account for MaxMind GeoLite at https://www.maxmind.com/en/geolite2/signup
+2. Download the 'GeoLite2 City - MaxMind DB binary' from https://www.maxmind.com/en/accounts/current/geoip/downloads
+3. Be sure to download <GeoLite2-City_YYYYMMDD.tar.gz> and <GeoLite2-ASN_YYYYMMDD.tar.gz>
+4. Extract the MMDB files from the tar.gz files.
+5. Place them in the same folder as GeoLogonalyzer.py
 
 ###  Python
 If you need to use the python source code (such as for modifiying configurations, adding custom
@@ -50,10 +48,11 @@ log parsing, or running on *nix/OSX), you will need to install the following dep
 you may not already have:
 
     netaddr
-    python-geoip
+    python-geoip-python3
     win_inet_pton
     geopy
-    geoip2
+    geoip2>=2.9.0
+    importlib-metadata
 
 A pip requirements.txt is provided for your convenience.
 
@@ -232,14 +231,7 @@ Example ip-output.csv:
 -----
 # Licenses
 ### GeoLogonalyzer License: 
-    This product is licensed under the Apache License, Version 2.0 and is
-    Copyright <C> 2018 FireEye, Inc. You may obtain a copy of the License
-    at: http://www.apache.org/licenses/LICENSE-2.0. Unless required by
-    applicable law or agreed to in writing, software distributed under the
-    License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
-    CONDITIONS OF ANY KIND, either express or implied. See the License for
-    the specific language governing permissions and limitations under the
-    License.
+    https://github.com/mandiant/GeoLogonalyzer/blob/master/LICENSE.txt
 
 ### MaxMind Attribution and Credit
 
@@ -267,4 +259,4 @@ Example ip-output.csv:
 GeoLogonalyzer was created by David Pany. The project was inspired by research performed by FireEye's data science team including Christopher Schmitt, Seth Summersett, Jeff Johns, Alexander Mulfinger, and more whose work supports live remote access processing in FireEye Helix - https://www.fireeye.com/solutions/helix.html. The "Logonalyzer" name was originally created by @0xF2EDCA5A.
 
 # Contact
-Please contact david.pany@fireeye.com or @davidpany on Twitter for bugs, comments, or suggestions. 
+Please contact david.pany@mandiant.com or @davidpany on Twitter for bugs, comments, or suggestions. 
