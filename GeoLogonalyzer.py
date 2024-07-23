@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #GeoLogonalyzer.py
-#Version 1.10
+#Version 1.11
 #   Geofeasibility calculator and datacenter cross reference utility
 #   customizable for various VPN log formats.
 #
@@ -10,6 +10,7 @@
 #   1.10
 #       - Runs in python3 - Thanks to Colby Lahaie!
 #       - Clarifies instructions for downloading GeoLite DBs with a free account
+#   1.11 - Minor updates
 #
 #Description:
 #   GeoLogonalyzer will perform location and metadata lookups on source IP
@@ -120,8 +121,6 @@ import sys
 import re # Might be used for custom line parsing
 import argparse
 from datetime import datetime
-#import urllib
-#import urllib2
 from urllib.request import urlopen
 import tarfile
 import shutil
@@ -129,7 +128,6 @@ import os
 import csv
 import time
 import unicodedata
-#import pkg_resources
 import importlib.metadata
 
 # Imports that are not likely to be installed by default:
@@ -143,7 +141,7 @@ except ImportError:
 try:
     from geoip import open_database
 except ImportError:
-    sys.stderr.write("Please install the geoip dependency:\n\tpip install python-geoip\n")
+    sys.stderr.write("Please install the geoip dependency:\n\tpip install python-geoip-python3\n")
     sys.exit()
 
 try:
