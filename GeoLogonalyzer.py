@@ -1,12 +1,15 @@
 #!/usr/bin/env python
 #
 #GeoLogonalyzer.py
-#Version 1.02
+#Version 1.10
 #   Geofeasibility calculator and datacenter cross reference utility
 #   customizable for various VPN log formats.
 #
 #Changes:
 #   1.02 - Added check for minimum geoip2 dependency version
+#   1.10
+#       - Runs in python3 - Thanks to Colby Lahaie!
+#       - Clarifies instructions for downloading GeoLite DBs with a free account
 #
 #Description:
 #   GeoLogonalyzer will perform location and metadata lookups on source IP
@@ -93,19 +96,7 @@
 #
 # License:
 #
-#     Copyright 2018 FireEye, Inc. (Created by David Pany)
-#
-#     Licensed under the Apache License, Version 2.0 (the "License");
-#     you may not use this file except in compliance with the License.
-#     You may obtain a copy of the License at
-#
-#        http://www.apache.org/licenses/LICENSE-2.0
-#
-#     Unless required by applicable law or agreed to in writing, software
-#     distributed under the License is distributed on an "AS IS" BASIS,
-#     WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-#     See the License for the specific language governing permissions and
-#     limitations under the License.
+#     https://raw.githubusercontent.com/mandiant/GeoLogonalyzer/master/LICENSE.txt
 #
 # 3rd party code attribution:
 #   This product retrieves and operates on data including datacenter categorizations retrieved from
@@ -129,15 +120,17 @@ import sys
 import re # Might be used for custom line parsing
 import argparse
 from datetime import datetime
-import urllib
-import urllib2
+#import urllib
+#import urllib2
+from urllib.request import urlopen
 import tarfile
 import shutil
 import os
 import csv
 import time
 import unicodedata
-import pkg_resources
+#import pkg_resources
+import importlib.metadata
 
 # Imports that are not likely to be installed by default:
 try:
@@ -161,7 +154,7 @@ except ImportError:
     sys.exit()
 
 try:
-    from geopy.distance import vincenty
+    from geopy.distance import geodesic
 except ImportError:
     sys.stderr.write("Please install the geopy dependency:\n\tpip install geopy\n")
     sys.exit()
@@ -170,7 +163,8 @@ try:
     import geoip2.database
     import geoip2.errors
     try: #ensure that geopip2 is 2.9.0 or greater. Older versions cause issues.
-        assert pkg_resources.get_distribution("geoip2").version >= '2.9.0'
+        #assert pkg_resources.get_distribution("geoip2").version >= '2.9.0'
+        assert importlib.metadata.version("geoip2") >= '2.9.0'
     except AssertionError:
         sys.stderr.write("Please upgrade the geoip dependency:\n\tpip install geoip2>=2.9.0\n")
         sys.exit()
@@ -185,107 +179,111 @@ SECONDS_PER_HOUR = 3600
 FAST_MPH = 500
 IMPOSSIBLE_MPH = 99999999
 
-def create_geoip_db():
+def create_geoip_db(pattern=r"GeoLite2-City_\d{8}\.tar\.gz"):
     """Open GeoIP DB if available, download if needed"""
-
     try:
-        # Try to open an existing GeoIP DB
+    # Try to open an existing GeoIP DB
         geoip_db = open_database('GeoLite2-City.mmdb')
+        print("GeoLite2 City Found. Success.")
         return geoip_db
-
+    
+    # Handling if file not found
     except IOError:
-        try:
-            #Download GeoIP DB
-            sys.stderr.write("\nCouldn't find the GeoIP DB. Attempting download now from "
-                             "http://geolite.maxmind.com/download/geoip/database/GeoLite2-City"
-                             ".tar.gz\n")
-            urllib.urlretrieve("http://geolite.maxmind.com/download/geoip/database/GeoLite2-City"
-                               ".tar.gz", "GeoLite2-City.tar.gz")
+        file_found = False
+        file_name = ""
+        
+        # Look through every file in working directory to identify if the tar.gz exists
+        for filename in os.listdir():
+            if re.match(pattern, filename):
+                # Extract the mmdb from the tar.gz if found
+                sys.stderr.write("\nExtracting GeoLite2 City Database.\n")
+                with tarfile.open(filename, "r:gz") as tar:
+                    tar_directory = tar.getnames()[0]
+                    tar.extractall()
 
-            # Extract GeoIP DB
-            sys.stderr.write("Extracting GeoLite Database.\n")
-            with tarfile.open("GeoLite2-City.tar.gz", "r:gz") as tar:
-                tar_directory = tar.getnames()[0]
-                tar.extractall()
+                    # Clean up unnecessary files
+                    sys.stderr.write("Cleaning up GeoLite2 City Archive.\n")
+                    shutil.move("{}/GeoLite2-City.mmdb".format(tar_directory), "GeoLite2-City.mmdb")
+                    shutil.rmtree(tar_directory)
 
-                # Clean up unnecessary files
-                sys.stderr.write("Cleaning up.\n\n")
-                shutil.move("{}/GeoLite2-City.mmdb".format(tar_directory), "GeoLite2-City.mmdb")
-                shutil.rmtree(tar_directory)
+                os.remove(filename)
 
-            os.remove("GeoLite2-City.tar.gz")
+                # Open and return GeoIP DB
+                geoip_db = open_database('GeoLite2-City.mmdb')
+                print("GeoLite2 City extracted. Success.")
+                return geoip_db
 
-            # Open and return GeoIP DB
-            geoip_db = open_database('GeoLite2-City.mmdb')
-            return geoip_db
+        # Provide instructions for manually downloading the GeoIP DB if we fail
+        sys.stderr.write("\nCouldn't find the GeoLite2 City DB. Please do the following:\n")
+        sys.stderr.write("\t1. Download the 'GeoLite2 City - MaxMind DB binary' from "
+                         "https://www.maxmind.com/en/accounts/current/geoip/downloads\n")
+        sys.stderr.write("\t\t1a. NOTE: MAXMIND NOW REQUIRES YOU TO CREATE A FREE ACCOUNT TO DOWNLOAD GEOLITE2 GEOLOCATION DATA\n")
+        sys.stderr.write("\t2. Make sure the downloaded archive file is named '<GeoLite2-City_YYYYMMDD.tar.gz>' and placed "
+            "in the 'GeoLogonalyzer.py' working directory\n")
+        sys.stderr.write("\t3. Extract the contents of '<GeoLite2-City_YYYYMMDD.tar.gz>' and make sure the DB file is named "
+                         "'GeoLite2-City.mmdb'\n")
+        sys.stderr.write("\t4. Place 'GeoLite2-City.mmdb' in the 'GeoLogonalyzer.py' working "
+                         "directory\n")
+        sys.stderr.write("\t5. Rerun the script\n")
+        sys.exit()
 
-        except:
-            # Provide instructions for manually downloading the GeoIP DB if we fail
-            sys.stderr.write("Couldn't find or download the GeoIP DB. Please do the following:\n")
-            sys.stderr.write("\t1. Download the 'GeoLite2 City - MaxMind DB binary' from "
-                             "http://dev.maxmind.com/geoip/geoip2/geolite2/\n")
-            sys.stderr.write("\t2. Extract the contents and make sure the DB file is named "
-                             "'GeoLite2-City.mmdb'\n")
-            sys.stderr.write("\t3. Place 'GeoLite2-City.mmdb' in the 'GeoLogonalyzer.py' working"
-                             "directory'\n")
-            sys.exit()
-
-def create_asn_db():
+def create_asn_db(pattern=r"GeoLite2-ASN_\d{8}\.tar\.gz"):
     """Open ASN DB if available, download if needed"""
-
     try:
         # Try to open an existing ASN DB
         asn_db_reader = geoip2.database.Reader("GeoLite2-ASN.mmdb")
+        print("GeoLite2 ASN Found. Success.")
         return asn_db_reader
 
     except IOError:
-        try:
-            # Download the ASN DB
-            sys.stderr.write("\nCouldn't find the ASN DB. Attempting download now from "
-                             "http://geolite.maxmind.com/download/geoip/database/GeoLite2-ASN"
-                             ".tar.gz\n")
-            urllib.urlretrieve("http://geolite.maxmind.com/download/geoip/database/GeoLite2-ASN"
-                               ".tar.gz", "GeoLite2-ASN.tar.gz")
+        file_found = False
+        file_name = ""
 
-            # Extract the ASN DB
-            sys.stderr.write("Extracting ASN Database.\n")
-            with tarfile.open("GeoLite2-ASN.tar.gz", "r:gz") as tar:
-                tar_directory = tar.getnames()[0]
-                tar.extractall()
+        for filename in os.listdir():
+            if re.match(pattern, filename):
+                
+                sys.stderr.write("Extracting GeoLite2 ASN Database.\n")
+                with tarfile.open(filename, "r:gz") as tar:
+                    tar_directory = tar.getnames()[0]
+                    tar.extractall()
 
-                # Clean up unnecessary files
-                sys.stderr.write("Cleaning up.\n\n")
-                shutil.move("{}/GeoLite2-ASN.mmdb".format(tar_directory), "GeoLite2-ASN.mmdb")
-                shutil.rmtree(tar_directory)
+                    # Clean up unnecessary files
+                    sys.stderr.write("Cleaning up GeoLite2 ASN Archive.\n")
+                    shutil.move("{}/GeoLite2-ASN.mmdb".format(tar_directory), "GeoLite2-ASN.mmdb")
+                    shutil.rmtree(tar_directory)
 
-            os.remove("GeoLite2-ASN.tar.gz")
+                os.remove(filename)
 
-            # Open and return ASN DB
-            asn_db_reader = geoip2.database.Reader('GeoLite2-ASN.mmdb')
-            return asn_db_reader
+                # Open and return ASN DB
+                asn_db_reader = geoip2.database.Reader("GeoLite2-ASN.mmdb")
+                print("GeoLite2 ASN extracted. Success.")
+                return asn_db_reader
 
-        except:
-            # Provide instructions for manually downloading the ASN DB if we fail
-            sys.stderr.write("Couldn't find or download the ASN DB. Please do the following:\n")
-            sys.stderr.write("\t1. Download the 'GeoLite2 ASN - MaxMind DB binary' from "
-                             "http://dev.maxmind.com/geoip/geoip2/geolite2/\n")
-            sys.stderr.write("\t2. Extract the contents and make sure the DB file is named "
-                             "'GeoLite2-ASN.tar.gz'\n")
-            sys.stderr.write("\t3. Place 'GeoLite2-ASN.tar.gz' in the 'GeoLogonalyzer.py' working"
-                             "directory'\n")
-            sys.exit()
+        # Provide instructions for manually downloading the ASN DB if we fail
+        sys.stderr.write("\nCouldn't find the GeoLite2 ASN DB. Please do the following:\n")
+        sys.stderr.write("\t1. Download the 'GeoLite2 ASN - MaxMind DB binary' from "
+                         "https://www.maxmind.com/en/accounts/current/geoip/downloads\n")
+        sys.stderr.write("\t\t1a. NOTE: MAXMIND NOW REQUIRES YOU TO CREATE A FREE ACCOUNT TO DOWNLOAD GEOLITE2 GEOLOCATION DATA\n")
+        sys.stderr.write("\t2. Make sure the downloaded archive file is named '<GeoLite2-ASN_YYYYMMDD.tar.gz>' and placed "
+            "in the 'GeoLogonalyzer.py' working directory\n")
+        sys.stderr.write("\t3. Extract the contents of '<GeoLite2-ASN_YYYYMMDD.tar.gz>' and make sure the DB file is named "
+                         "'GeoLite2-ASN.mmdb'\n")
+        sys.stderr.write("\t4. Place 'GeoLite2-ASN.mmdb' in the 'GeoLogonalyzer.py' working "
+                         "directory\n")
+        sys.stderr.write("\t5. Rerun the script\n")
+        sys.exit()
 
 def create_dch_dict():
     """Download datacenter CSV and create dictionary of cidr ranges"""
 
     sys.stderr.write("\nDownloading DCH (data center hosting) data from "
                      "https://raw.githubusercontent.com/client9/ipcat/master/datacenters.csv\n")
-    dch_response = urllib2.urlopen('https://raw.githubusercontent.com/client9/ipcat/master/'
+    dch_response = urlopen('https://raw.githubusercontent.com/client9/ipcat/master/'
                                    'datacenters.csv')
 
     dch_file = dch_response.read()
     dch_dict = {}
-    dch_list = dch_file.split("\n")
+    dch_list = dch_file.decode('utf-8').split("\n")
 
     # Read downloaded DCH CSV and parse into dch_list
     sys.stderr.write("Creating DCH Database.\n")
@@ -367,7 +365,7 @@ def calculate_logon_differences(user_list):
     # "location" is coordinates and vincentrify calculates miles between coordinates
     difference_dict["first_location"] = user_list[0]["location"]
     difference_dict["second_location"] = user_list[1]["location"]
-    difference_dict["location_miles_diff"] = vincenty(difference_dict["first_location"],
+    difference_dict["location_miles_diff"] = geodesic(difference_dict["first_location"],
                                                       difference_dict["second_location"]).miles
 
     # Add anomaly if distance is far
@@ -549,7 +547,7 @@ def  reserved_ip_check(ip_string):
     if ip_address.is_multicast():
         return multicast_ip_details
 
-    elif ip_address.is_private():
+    elif ip_address.is_ipv4_private_use():
         return private_ip_details
 
     elif ip_address.is_reserved():
@@ -564,7 +562,7 @@ def  reserved_ip_check(ip_string):
     elif ip_address.is_loopback():
         return loopback_ip_details
 
-    elif ip_address.is_unicast() and not ip_address.is_private():
+    elif ip_address.is_unicast() and not ip_address.is_ipv4_private_use():
         # Boolean to be returned if IP is Public
         ip_reserved = False
         return ip_reserved
@@ -575,7 +573,7 @@ def  reserved_ip_check(ip_string):
 def find_dch(ip_string, dch_dict):
     """Find if the IP exists in a DCH subnet from our created database"""
 
-    for cidr_range, company in dch_dict.iteritems():
+    for cidr_range, company in dch_dict.items():
         if IPAddress(ip_string) in cidr_range:
             return company
 
@@ -620,7 +618,7 @@ def main(args):
         skip_rfc1918 = False
 
     # Create output file
-    output_file = open("{}".format(args.output), "wb")
+    output_file = open("{}".format(args.output), "w", newline='')
     csv_writer = csv.writer(output_file, delimiter=',', quotechar='"',
                             quoting=csv.QUOTE_MINIMAL)
 
@@ -780,8 +778,6 @@ def main(args):
                     # Find ASN organization name from MaxMind ASN DB
                     try:
                         asn_name = asn_db_match.autonomous_system_organization
-                        if asn_name != None:
-                            asn_name = unicodedata.normalize('NFKD',asn_name).encode('ascii','ignore')
                     except AttributeError:
                         asn_name = " "
                     ip_cache[ip_string]["asn_name"] = asn_name
@@ -862,7 +858,7 @@ def main(args):
 
     # Print information for the last logon streak of each user
     # Useful if there are no source IP changes for that user
-    for user, logon_info in user_dict.iteritems():
+    for user, logon_info in user_dict.items():
 
         if len(logon_info) != 1:
             # Catch if a user has more than 1 logon remaining, which should not happen
@@ -909,8 +905,7 @@ def main(args):
         csv_writer.writerow(last_streak_list)
 
     # Always be polite!
-    sys.stderr.write("\n\nComplete! Thanks for using GeoLogonalyzer.py. Please report issues to"
-                     "@davidpany\n\n")
+    sys.stderr.write("\n\nComplete! Thanks for using GeoLogonalyzer.py.")
     output_file.close()
 
 if __name__ == "__main__":
@@ -942,7 +937,7 @@ if __name__ == "__main__":
 
     # Welcome Message
     sys.stderr.write("\n   Thank you for using GeoLogonAnalyzer.py, created by David Pany at"
-                     " FireEye, Inc.\n      Version 1.01\n\n")
+                     " Mandiant\n      Version 1.10\n\n")
     sys.stderr.write("   Example command syntax:\n")
     sys.stderr.write("      python GeoLogonalyzer.py --csv VPNLogs.csv --output output.csv\n\n")
 
@@ -950,29 +945,19 @@ if __name__ == "__main__":
     time.sleep(1)
 
     sys.stderr.write("Licenses:\n"
-                     "\tThis product is licensed under the Apache License, Version 2.0 and is\n"
-                     "\tCopyright <C> 2018 FireEye, Inc. You may obtain a copy of the License\n"
-                     "\tat: http://www.apache.org/licenses/LICENSE-2.0. Unless required by\n"
-                     "\tapplicable law or agreed to in writing, software distributed under the\n"
-                     "\tLicense is distributed on an \"AS IS\" BASIS, WITHOUT WARRANTIES OR\n"
-                     "\tCONDITIONS OF ANY KIND, either express or implied. See the License for\n"
-                     "\tthe specific language governing permissions and limitations under the\n"
-                     "\tLicense.\n\n")
+                     "\tThe license for GeoLogonalyzer can be found at:\n"
+                     "\t\thttps://raw.githubusercontent.com/mandiant/GeoLogonalyzer/master/LICENSE.txt\n\n")
 
     # Attribution and license information for MaxMind
     sys.stderr.write("\tThis product includes GeoLite2 data created by MaxMind, available from\n"
-                     "\thttp://www.maxmind.com provided under the Creative Commons Attribution-\n"
-                     "\tShareAlike 4.0 International License. Copyright (C) 2012-2018 Maxmind, Inc."
-                     "\n\tCopyright (C) 2012-2018 Maxmind, Inc.\n\n")
+                     "\thttps://www.maxmind.com\n\n")
 
     # Attribution and license information for Client9
     sys.stderr.write("\tThis product retrieves and operates on data including datacenter\n"
                      "\tcategorizations retrieved from https://github.com/client9/ipcat/ which\n"
-                     "\tare Copyright <C> 2018 Client9. This data comes with ABSOLUTELY NO\n"
+                     "\tare Copyright <C> 2023 Nick Galbreath. This data comes with ABSOLUTELY NO\n"
                      "\tWARRANTY; for details go to:\n"
-                     "\t\thttps://raw.githubusercontent.com/client9/ipcat/master/LICENSE\n"
-                     "\tThe data is free software, and you are welcome to redistribute it under\n"
-                     "\tcertain conditions. See LICENSE for details.\n\n")
+                     "\t\thttps://raw.githubusercontent.com/client9/ipcat/master/LICENSE\n\n")
 
     # Sleep for 2 seconds after displaying license
     time.sleep(2)
@@ -983,10 +968,9 @@ if __name__ == "__main__":
                         '(optional),VPN client (optional)"', required=False)
     parser.add_argument("--custom", help='Custom line parsing to be implemented by user',
                         required=False)
-    parser.add_argument("--ip_only", help='File of IP Addresses only, one per line', required=False)
+    parser.add_argument("--ip_only", help='TXT file of IP Addresses only, one per line', required=False)
     parser.add_argument("--output", help='Output CSV file', required=True)
     parser.add_argument("--skip_rfc1918", help='Skip RFC1918 source IP addresses', required=False,
                         action='store_true')
     args = parser.parse_args()
     main(args)
-    
