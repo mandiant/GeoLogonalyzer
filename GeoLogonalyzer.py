@@ -11,6 +11,7 @@
 #       - Runs in python3 - Thanks to Colby Lahaie!
 #       - Clarifies instructions for downloading GeoLite DBs with a free account
 #   1.11 - Minor updates
+#   1.12 - Updated DCH CSV to more updated source
 #
 #Description:
 #   GeoLogonalyzer will perform location and metadata lookups on source IP
@@ -101,17 +102,16 @@
 #
 # 3rd party code attribution:
 #   This product retrieves and operates on data including datacenter categorizations retrieved from
-#   https://github.com/client9/ipcat/ which are Copyright <C> 2018 Client9. This data comes with
-#   ABSOLUTELY NO WARRANTY; for details go to https://raw.githubusercontent.com/client9/ipcat/master
-#   /LICENSE. The data is free software, and you are welcome to redistribute it under certain
-#   conditions. See LICENSE for details.
+#   categorizations retrieved from https://github.com/growlfm/ipcat/ which is a version from 
+#   https://github.com/client9/ipcat/
+#
+#   Licenses:
+#       https://raw.githubusercontent.com/client9/ipcat/master/LICENSE
+#       https://raw.githubusercontent.com/growlfm/ipcat/main/LICENSE
 #
 #   This product includes GeoLite2 data created by MaxMind, available from http://www.maxmind.com
 #   provided under the Creative Commons Attribution-ShareAlike 4.0 International License.
 #   Copyright (C) 2012-2018 Maxmind, Inc.
-#
-#   This product includes datacenter categorizations created by Nick Galbreath, available from
-#       https://github.com/client9/ipcat/.
 #
 #   Mad gr33tz to @0xF2EDCA5A for the "Logonalyzer" name inspiration.
 #
@@ -275,9 +275,8 @@ def create_dch_dict():
     """Download datacenter CSV and create dictionary of cidr ranges"""
 
     sys.stderr.write("\nDownloading DCH (data center hosting) data from "
-                     "https://raw.githubusercontent.com/client9/ipcat/master/datacenters.csv\n")
-    dch_response = urlopen('https://raw.githubusercontent.com/client9/ipcat/master/'
-                                   'datacenters.csv')
+                     "https://raw.githubusercontent.com/growlfm/ipcat/main/datacenters.csv\n")
+    dch_response = urlopen('https://raw.githubusercontent.com/growlfm/ipcat/main/datacenters.csv')
 
     dch_file = dch_response.read()
     dch_dict = {}
@@ -952,10 +951,11 @@ if __name__ == "__main__":
 
     # Attribution and license information for Client9
     sys.stderr.write("\tThis product retrieves and operates on data including datacenter\n"
-                     "\tcategorizations retrieved from https://github.com/client9/ipcat/ which\n"
-                     "\tare Copyright <C> 2023 Nick Galbreath. This data comes with ABSOLUTELY NO\n"
-                     "\tWARRANTY; for details go to:\n"
-                     "\t\thttps://raw.githubusercontent.com/client9/ipcat/master/LICENSE\n\n")
+                     "\tcategorizations retrieved from https://github.com/growlfm/ipcat/\n"
+                     "\twhich is a version from https://github.com/client9/ipcat/.\n"
+                     "\tLicenses:\n"
+                     "\t\thttps://raw.githubusercontent.com/client9/ipcat/master/LICENSE\n"
+                     "\t\thttps://raw.githubusercontent.com/growlfm/ipcat/main/LICENSE\n\n")
 
     # Sleep for 2 seconds after displaying license
     time.sleep(2)
